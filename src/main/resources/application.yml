@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: mcp-server
+  ai:
+    mcp:
+      server:
+        name: mcp-server # mcp-server名称
+        sse-endpoint: sse # 启动sse协议，并指定端点路径为/sse
+        enabled: true # 组件启用
+
+server:
+  port: 23990

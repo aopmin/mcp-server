@@ -10,6 +10,6 @@ public class McpServerApplication {
     public static void main(String[] args) {
         SpringApplication.run(McpServerApplication.class, args);
         log.info("MCP Server 启动成功===>");
-        log.info("验证MCP服务暴露的SSE端点：curl http://localhost:23990/sse");
+        log.info("验证MCP服务是否自动暴露SSE端点：curl http://localhost:23990/sse");
     }
 }

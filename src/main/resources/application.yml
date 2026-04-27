@@ -1,12 +1,40 @@
 spring:
   application:
-    name: mcp-server
+    name: spring-ai-mcp-demo
+
+  # Ollama 配置
   ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: qwen2.5:7b    # 替换为你的模型
+          temperature: 0.7
+
+    # MCP Server 配置
     mcp:
       server:
-        name: mcp-server # mcp-server名称
-        sse-endpoint: sse # 启动sse协议，并指定端点路径为/sse
-        enabled: true # 组件启用
+        enabled: true
+        name: mcp-server
+        version: 1.0.0
+        protocol: STREAMABLE # 支持 STREAMABLE 和 HTTP 两种协议
+        capabilities:
+          tools: true
+          resources: false
+          prompts: false
+        streamable-http:
+          mcp-endpoint: /mcp
+
+      # MCP Client 配置
+      client:
+        enabled: true
+        server-url: http://localhost:8086
+        request-timeout: 30s
 
 server:
-  port: 23990
+  port: 8086
+
+logging:
+  level:
+    cn.aopmin: DEBUG           # 项目包级别可调为 DEBUG
+    org.springframework.ai: INFO     # Spring AI 核心日志

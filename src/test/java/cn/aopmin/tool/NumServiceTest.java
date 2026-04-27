@@ -1,4 +1,4 @@
-package cn.aopmin.service;
+package cn.aopmin.tool;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

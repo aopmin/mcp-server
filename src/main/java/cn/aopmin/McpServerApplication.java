@@ -5,7 +5,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
+import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 @SpringBootApplication
@@ -22,4 +24,5 @@ public class McpServerApplication {
         log.info("测试命令  (计算器)  :\ncurl -X POST http://localhost:{}/api/chat \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"message\":\"计算 123 + 456\"}'", port);
 
     }
+
 }

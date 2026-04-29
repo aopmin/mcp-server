@@ -3,7 +3,14 @@ package cn.aopmin.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,8 +26,13 @@ public class McpToolService {
     
     // 模拟数据存储
     private final Map<String, Map<String, Object>> orders = new HashMap<>();
+    private final RestTemplate restTemplate;
+    private final String limitBaseUrl;
     
-    public McpToolService() {
+    public McpToolService(RestTemplate restTemplate, @Value("${remote.limit.base-url}") String limitBaseUrl) {
+        this.restTemplate = restTemplate;
+        this.limitBaseUrl = limitBaseUrl;
+
         // 初始化模拟订单
         Map<String, Object> order1 = new HashMap<>();
         order1.put("orderId", "ORD-001");
@@ -110,5 +122,65 @@ public class McpToolService {
             "expression", a + " " + operation + " " + b,
             "result", result
         );
+    }
+
+    @Tool(description = "根据城市编码查询额度上限，返回额度值和接口原始状态")
+    public Map<String, Object> getCityLimit(
+            @ToolParam(description = "城市编码，例如 5") String cityCode) {
+
+        log.info("额度查询工具被调用=> cityCode: {}", cityCode);
+
+        if (cityCode == null || cityCode.trim().isEmpty()) {
+            return Map.of("success", false, "error", "cityCode 不能为空");
+        }
+
+        String url = UriComponentsBuilder
+                .fromHttpUrl(limitBaseUrl)
+                .path("/gb/limit")
+                .queryParam("cityCode", cityCode)
+                .toUriString();
+
+        try {
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            Map<String, Object> body = response.getBody();
+
+            if (body == null) {
+                return Map.of(
+                        "success", false,
+                        "cityCode", cityCode,
+                        "error", "远程接口返回空数据"
+                );
+            }
+
+            Object t = body.get("t"); // 额度值，示例: 10000.00
+            Object success = body.get("success");
+            Object resultCode = body.get("resultCode");
+            Object resultMsg = body.get("resultMsg");
+            Object currentTime = body.get("currentTime");
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", success != null ? success : true);
+            result.put("cityCode", cityCode);
+            result.put("limit", t);
+            result.put("resultCode", resultCode);
+            result.put("resultMsg", resultMsg);
+            result.put("currentTime", currentTime);
+            result.put("raw", body); // 保留原始响应，便于排查
+            return result;
+        } catch (ResourceAccessException e) {
+            log.error("额度查询连接失败，cityCode: {}", cityCode, e);
+            return Map.of(
+                    "success", false,
+                    "cityCode", cityCode,
+                    "error", "HTTPS连接失败，可能是证书或主机名校验问题"
+            );
+        } catch (RestClientException e) {
+            log.error("额度查询失败，cityCode: {}", cityCode, e);
+            return Map.of(
+                    "success", false,
+                    "cityCode", cityCode,
+                    "error", "调用远程接口失败: " + e.getMessage()
+            );
+        }
     }
 }

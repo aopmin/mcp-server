@@ -2,13 +2,25 @@ package cn.aopmin.config;
 
 import cn.aopmin.service.McpToolService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hc.client5.http.classic.HttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.client5.http.ssl.TrustAllStrategy;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactoryBuilder;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.model.function.FunctionCallback;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.web.client.RestTemplate;
+
+import javax.net.ssl.SSLContext;
 
 import java.util.Arrays;
 import java.util.List;
@@ -23,6 +35,29 @@ import java.util.List;
 @Slf4j
 @Configuration
 public class McpConfig {
+
+    @Bean
+    public RestTemplate restTemplate(@Value("${remote.limit.insecure-ssl:false}") boolean insecureSsl) throws Exception {
+        if (!insecureSsl) {
+            return new RestTemplate();
+        }
+
+        // Dev/UAT only: relax SSL verification when upstream certificate SAN does not match hostname.
+        SSLContext sslContext = SSLContextBuilder.create()
+                .loadTrustMaterial(new TrustAllStrategy())
+                .build();
+
+        HttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(PoolingHttpClientConnectionManagerBuilder.create()
+                        .setSSLSocketFactory(SSLConnectionSocketFactoryBuilder.create()
+                                .setSslContext(sslContext)
+                                .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                                .build())
+                        .build())
+                .build();
+
+        return new RestTemplate(new HttpComponentsClientHttpRequestFactory(httpClient));
+    }
 
     /**
      * 手动注册工具（方式一）
